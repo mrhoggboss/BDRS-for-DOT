@@ -1,0 +1,13 @@
+# The separate environment of the SinkhornGrid baseline: OTT-JAX's Grid Sinkhorn
+# (src/runners/run_sinkhorngrid.py). Do not install JAX into the torch environment. Create
+# a new environment at a directory of your choice, install this file into it, and point
+# BDRS_OTT_PYTHON at its python:
+#   OTT_ENV=/path/of/your/choice/ott
+#   python -m venv "$OTT_ENV" && "$OTT_ENV/bin/pip" install -r requirements-ott.txt
+#   export BDRS_OTT_PYTHON="$OTT_ENV/bin/python"
+# The orchestrator runs SinkhornGrid with $BDRS_OTT_PYTHON; the runner and the repository
+# modules it imports do not use torch.
+ott-jax==0.6.0
+jax[cuda12]==0.10.2
+# GPU peak memory through NVML (src/runners/nvml_sampler.py).
+nvidia-ml-py

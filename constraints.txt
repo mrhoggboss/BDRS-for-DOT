@@ -1,0 +1,24 @@
+# The package versions of the paper's environment (README, "Environment of the paper"), as a
+# pip constraints file: a package listed here is installed at this version when it is
+# installed at all. Use it with requirements.txt:
+#   pip install torch -c constraints.txt --index-url https://download.pytorch.org/whl/cu130
+#   pip install -r requirements.txt -c constraints.txt
+# scripts/build_all_baselines.sh applies it to every pip install it runs. The SinkhornGrid
+# environment pins its own versions in requirements-ott.txt.
+torch==2.13.0
+numpy==2.4.6
+scipy==1.17.1
+POT==0.9.7
+matplotlib==3.10.1
+pandas==2.2.3
+cupy-cuda12x==14.1.1
+numba==0.66.0
+nvidia-ml-py==13.610.43
+trimesh==4.12.2
+tqdm==4.68.4
+pytest==9.1.1
+ninja==1.13.0
+# Build tools of the cuPDLPx binding (scripts/build_all_baselines.sh).
+pybind11==3.0.4
+scikit-build-core==1.0.2
+cmake==4.3.4

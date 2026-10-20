@@ -1,0 +1,46 @@
+BasedOnStyle: LLVM
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+ColumnLimit: 120
+
+BreakBeforeBraces: Allman
+
+PointerAlignment: Right
+DerivePointerAlignment: false
+
+BinPackParameters: false
+BinPackArguments: false
+
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: false
+
+IndentCaseLabels: true
+InsertNewlineAtEOF: true
+
+SortIncludes: true
+
+ReflowComments: false
+AlignOperands: false
+
+StatementMacros:
+  - ASSERT
+  - CHECK
+  - REQUIRE
+  - ENSURE
+  - EXPECT
+  - CUDA_CHECK
+  - CUBLAS_CHECK
+  - CUSPARSE_CHECK
+
+AttributeMacros: 
+  - __global__
+  - __device__
+  - __host__
+  - __shared__
+  - __constant__
+  - __managed__
+  - __launch_bounds__

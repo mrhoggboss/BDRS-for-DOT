@@ -1,0 +1,32 @@
+# Input data: the raw downloads at the root, and everything generated from them
+/DOTmark_1.0
+DOTmark_1.0.zip
+/ModelNet10
+ModelNet10.zip
+/cost_matrices/
+/data/
+
+# Benchmark outputs
+/results/
+*.pareto_fg.npz
+
+# Python
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Built and fetched baselines. HALO, M3S and LAMP are fetched at their pins by
+# vendor/{halo,m3s,lamp}/fetch.sh, never committed.
+/vendor/drot/shim/bdrs_shim
+/vendor/halo/upstream/
+/vendor/halo/_build/
+/vendor/halo/_cmake/
+/vendor/m3s/upstream/
+/vendor/m3s/_build/
+/vendor/lamp/upstream/
+/vendor/cupdlpx/upstream/build/
+
+# Editors and operating systems
+.vscode/
+.DS_Store

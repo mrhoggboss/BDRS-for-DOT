@@ -1,0 +1,51 @@
+# Python dependencies of the torch environment: the BDRS solvers, the runners, scoring,
+# reports and tests. SinkhornGrid (OTT-JAX) runs in a separate environment
+# (requirements-ott.txt).
+#
+# PyTorch with CUDA. The paper's runs used Python 3.11 with torch 2.13.0+cu130 (CUDA 13.0),
+# installed with
+#   pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu130
+# README.md lists the rest of that environment.
+torch
+
+# torch.utils.cpp_extension.load, which compiles the CUDA extension
+# (src/methods/cuda_ext.py), requires ninja.
+ninja
+
+numpy
+
+# Python Optimal Transport: the Sinkhorn baseline (ot.bregman.sinkhorn_log on CUDA torch
+# tensors) and the exact optima (ot.emd2) the tests compare against. The preflight check
+# (src/benchmark/preflight.py) requires 0.9.4 or later.
+POT>=0.9.4
+
+# Figures (src/report/pareto_plot.py, src/figures/). LaTeX is optional: without
+# it src/figures/ sets the text in matplotlib's bundled Computer Modern.
+matplotlib
+pandas
+
+# HALO baseline (vendor/halo): cupy for its grid-mode GPU kernels, numba for
+# core/solver_utils.py, which imports it at module level. The CUDA 12 build of cupy runs
+# under a CUDA 13 driver.
+cupy-cuda12x
+numba
+
+# HOT baseline (vendor/HOT): HOT_Solver.py imports tqdm at module level.
+tqdm
+
+# GPU peak memory through NVML (src/runners/nvml_sampler.py), for the runners whose solvers
+# allocate outside torch (HALO, M3S, cuPDLPx, SinkhornGrid). nvidia-ml-py is NVIDIA's
+# binding and provides the `pynvml` module.
+nvidia-ml-py
+
+# ModelNet10 loader (src/instances/modelnet.py): reads .off meshes and samples points on
+# the surface, weighted by area.
+trimesh
+
+pytest
+
+# Sparse matrices: the LP constraint matrix of the cuPDLPx runner
+# (src/instances/dot_lp.py), sparse plans (src/scoring/plan_metrics.py) and HALO's coupling.
+scipy
+
+# The compiled baselines are built separately (vendor/README.md).

@@ -1,0 +1,66 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        cuda: ["12.4.0", "12.5.0", "12.6.0", "12.8.0", "12.9.0", "13.0.0", "13.1.0"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Jimver/cuda-toolkit@v0.2.30
+        id: cuda-toolkit
+        with:
+          cuda: ${{ matrix.cuda }}
+          linux-local-args: '["--toolkit"]'
+          use-github-cache: 'false'
+          log-file-suffix: '${{ matrix.os }}-${{ matrix.cuda }}'
+
+      - name: CUDA info
+        run: |
+          echo "Installed cuda version is: ${{ steps.cuda-toolkit.outputs.cuda }}"
+          echo "Cuda install location: ${{ steps.cuda-toolkit.outputs.CUDA_PATH }}"
+          nvcc -V
+
+      - name: Install build deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build zlib1g-dev
+
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCUPDLPX_BUILD_TESTS=OFF
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cmake --build build --clean-first
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake -B build `
+            -DCMAKE_CONFIGURATION_TYPES=Release `
+            -DCUPDLPX_BUILD_TESTS=OFF
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cmake --build build --clean-first --config Release
