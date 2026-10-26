@@ -208,18 +208,18 @@ python -m src.runners.lamp_client shutdown
 
 ### Redrawing the figures from the paper's data
 
-The rows behind the paper's figures are attached to the `v2.0` release as `bdrs-v2.0-paper-data.tar.gz` (29 MB): one row per run of the paper's benchmark (96,361 runs, Figs. 1 to 5) and the rows of the two studies (Figs. 6 and 7). Drawing all nine figures from them takes seconds and needs no GPU:
+The rows behind the paper's figures are attached to the `v2.1` release as `bdrs-v2.1-paper-data.tar.gz` (29 MB): one row per run of the paper's benchmark (96,361 runs, Figs. 1 to 5), the rows of the two studies (Figs. 6 and 7), and the counts of runs, scored runs and runs within tolerance per cell of Figs. 1 to 5 and per solver and size on DOTmark (the paper's Appendix B). Drawing all nine figures from them takes seconds and needs no GPU:
 
 ```bash
-curl -LO https://github.com/mrhoggboss/BDRS-for-DOT/releases/download/v2.0/bdrs-v2.0-paper-data.tar.gz
-echo "b7a93c230587a1cb5fb67ad765792fd1574b19bfe6d3ef9a84de9214db829141  bdrs-v2.0-paper-data.tar.gz" | sha256sum -c
-tar -xzf bdrs-v2.0-paper-data.tar.gz
-python -m src.figures.make --figure 1 2 3 4a 4b 5 --runs bdrs-v2.0-paper-data/figs1-5/pareto.csv.gz --out results/paper_figures
-python -m src.figures.make --figure 6 --runs bdrs-v2.0-paper-data/fig6 --out results/paper_figures
-python -m src.figures.make --figure 7a 7b --runs bdrs-v2.0-paper-data/fig7 --out results/paper_figures
+curl -LO https://github.com/mrhoggboss/BDRS-for-DOT/releases/download/v2.1/bdrs-v2.1-paper-data.tar.gz
+echo "3ff9331d3a4e11a8904454a6b84f40b9b6bbb95c230f033b9912cd9569834f7c  bdrs-v2.1-paper-data.tar.gz" | sha256sum -c
+tar -xzf bdrs-v2.1-paper-data.tar.gz
+python -m src.figures.make --figure 1 2 3 4a 4b 5 --runs bdrs-v2.1-paper-data/figs1-5/pareto.csv.gz --out results/paper_figures
+python -m src.figures.make --figure 6 --runs bdrs-v2.1-paper-data/fig6 --out results/paper_figures
+python -m src.figures.make --figure 7a 7b --runs bdrs-v2.1-paper-data/fig7 --out results/paper_figures
 ```
 
-`bdrs-v2.0-paper-data/README.md` describes the files and the columns of the per-run table.
+`bdrs-v2.1-paper-data/README.md` describes the files, the columns of the per-run table and the runs the figures leave out.
 
 ### A reduced reproduction: Fig. 1 on 50 instances
 

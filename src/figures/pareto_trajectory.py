@@ -4,7 +4,8 @@ Each (algorithm, tolerance) arm is a set of unconnected points in the
 (t_cert, KKT residual) plane, one per size, so an arm traces its trajectory as
 the problem grows. Colour is the algorithm family, its shade the swept
 parameter (lighter = looser), and the marker shape the problem size, assigned
-by rank over the whole figure. An arm that has no scored solve at the next
+by rank over the whole figure. A point that aggregates fewer instances than
+its cell's co-solved set is drawn hollow. An arm that has no scored solve at the next
 size (or, symmetrically, at a smaller one) ends in a dotted tie to a cross at
 the panel edge, labelled with the cause: OOM, timeout, error or no plan. The
 label sits above the cross, or below it where above it would cover a marker
@@ -30,7 +31,7 @@ from src.figures import plotstyle
 from src.figures.cells import CellSource
 from src.figures.pareto_cell import (
     ECOL, ELABEL, FAMILY_COLOR, FORMAT_MARKER, XCOL, XLABEL, arm_param, display,
-    draw_cert_segments, family, shade,
+    draw_cert_segments, family, is_partial, point_style, shade,
 )
 
 
@@ -87,10 +88,19 @@ NORM_TEX = {"l1": r"$\ell_1$", "l2": r"$\ell_2$",
 
 BETTER = "better $\\downarrow\\leftarrow$"
 
-# The row layout's colour legend: its number of columns, and the height of one
-# row in inches.
+# The row layout (one panel per cost) sets its ticks, legends and labels in
+# ROW_TEXT points, ROW_SCALE times the compact layout's; the heights below its
+# axes scale with it: the colour legend's columns and the height of one of its
+# rows, the size legend's and the x label's lower edges, and the axes' bottom,
+# all in inches above the figure's bottom (beyond the colour legend's first two
+# rows). The figure grows by what the bottom gains, so the axes keep their size.
+ROW_SCALE = 15 / 13
+ROW_TEXT = round(plotstyle.TICK_SIZE * ROW_SCALE)
 LEGEND_NCOL = 4
-LEGEND_ROW_IN = 0.28
+LEGEND_ROW_IN = 0.28 * ROW_SCALE
+SIZE_LEGEND_IN = 0.62 * ROW_SCALE
+XLABEL_IN = 1.08 * ROW_SCALE
+AXES_BOTTOM_IN = 1.75 * ROW_SCALE
 
 
 def _apply_drops(d: pd.DataFrame, norm: str, drops: Sequence[Drop]) -> pd.DataFrame:
@@ -233,13 +243,13 @@ def _draw_arms(ax, d, dataset, multi_format, size_mk, fails, norm, marks):
                 lab = rf"{fam} {display(reg)}, $\mathrm{{tol}} = {_tol_tex(tol)}$"
 
         xs, ys = g[XCOL].to_numpy(), g[ECOL].to_numpy()
-        for x, y, n in zip(xs, ys, g["size"]):
+        hollow = [is_partial(r) for _, r in g.iterrows()]
+        for x, y, n, h in zip(xs, ys, g["size"], hollow):
             mk = size_mk[int(n)] if size_mk else FORMAT_MARKER.get(reg, "o")
             # Our solvers' points are drawn above the baselines' where they meet.
-            ax.plot([x], [y], marker=mk, color=col, linestyle="none",
+            ax.plot([x], [y], marker=mk, linestyle="none",
                     markersize=14.0 if mk == "*" else 9.5,
-                    markeredgecolor="white", markeredgewidth=1.0,
-                    zorder=6.5 if fam == "BDRS" else 6)
+                    zorder=6.5 if fam == "BDRS" else 6, **point_style(col, h, 1.0))
         handles.append((lab, Patch(facecolor=col, edgecolor="none", label=lab)))
         draw_cert_segments(ax, g, col)
 
@@ -288,17 +298,17 @@ def _cross_x(ax, side: str) -> float:
     return hi / 1.35 if side == "right" else lo * 1.35
 
 
-def _annotate_label(ax, cross, below: bool):
+def _annotate_label(ax, cross, below: bool, fontsize: float = plotstyle.TICK_SIZE - 1):
     """The label of ``cross``, above it or ``below`` it."""
     _, y, col, text, side, *_ = cross
     dx, ha = (-LABEL_DX, "right") if side == "right" else (LABEL_DX, "left")
     return ax.annotate(text, (_cross_x(ax, side), y), textcoords="offset points",
                        xytext=(dx, -LABEL_DY if below else LABEL_DY), ha=ha,
                        va="top" if below else "bottom", color=col,
-                       fontsize=plotstyle.TICK_SIZE - 1, zorder=7)
+                       fontsize=fontsize, zorder=7)
 
 
-def _fail_label_sides(ax, crosses, fail_labels_for
+def _fail_label_sides(ax, crosses, fail_labels_for, fontsize: float = plotstyle.TICK_SIZE - 1
                       ) -> Tuple[List[bool], List[Tuple[float, float]]]:
     """Whether each cross's label goes below it, and, for each label below
     that the axes' bottom edge cuts, (the height of its cross above that edge,
@@ -328,7 +338,7 @@ def _fail_label_sides(ax, crosses, fail_labels_for
         boxes.append((cx - r, cy - r, cx + r, cy + r))
 
     def extent(c, lower):
-        t = _annotate_label(ax, c, lower)
+        t = _annotate_label(ax, c, lower, fontsize)
         bb = t.get_window_extent(renderer)
         t.remove()
         return (bb.x0, bb.y0, bb.x1, bb.y1)
@@ -370,20 +380,22 @@ def _lower_floor(ax, short: List[Tuple[float, float]]) -> bool:
     return True
 
 
-def _place_fail_labels(axes, crosses_per_ax, fail_labels_for) -> List[List[bool]]:
+def _place_fail_labels(axes, crosses_per_ax, fail_labels_for,
+                       fontsize: float = plotstyle.TICK_SIZE - 1) -> List[List[bool]]:
     """``_fail_label_sides`` for each of ``axes``, which share their y range,
     after lowering that range until every label below its cross fits; the
     sides are decided at the final range."""
     for _ in range(8):
-        decided = [_fail_label_sides(ax, cr, fail_labels_for)
+        decided = [_fail_label_sides(ax, cr, fail_labels_for, fontsize)
                    for ax, cr in zip(axes, crosses_per_ax)]
         if not _lower_floor(axes[0], [s for _, short in decided for s in short]):
             return [below for below, _ in decided]
-    return [_fail_label_sides(ax, cr, fail_labels_for)[0]
+    return [_fail_label_sides(ax, cr, fail_labels_for, fontsize)[0]
             for ax, cr in zip(axes, crosses_per_ax)]
 
 
-def _draw_failure_marks(ax, crosses, fail_labels_for, below=None) -> List[Tuple[str, str]]:
+def _draw_failure_marks(ax, crosses, fail_labels_for, below=None,
+                        fontsize: float = plotstyle.TICK_SIZE - 1) -> List[Tuple[str, str]]:
     """Each cross at the panel edge (it has no time of its own), tied to its arm;
     called once the limits are fixed. ``below[i]`` puts the label of
     ``crosses[i]`` below it (``_place_fail_labels``); by default labels go
@@ -398,7 +410,7 @@ def _draw_failure_marks(ax, crosses, fail_labels_for, below=None) -> List[Tuple[
                 markeredgewidth=CROSS_EDGE, linestyle="none", zorder=7, clip_on=False)
         if fail_labels_for is not None and algo not in fail_labels_for:
             continue
-        _annotate_label(ax, cross, bool(below[i]) if below is not None else False)
+        _annotate_label(ax, cross, bool(below[i]) if below is not None else False, fontsize)
         labels.append((algo, text))
     return labels
 
@@ -478,6 +490,8 @@ def _summary(frames, crosses, labels, below) -> Dict:
                                             zip(d.algorithm, d.tolerance)}),
                             "points": sorted((a, float(t), int(s)) for a, t, s in
                                              zip(d.algorithm, d.tolerance, d["size"])),
+                            "hollow": sorted((r.algorithm, float(r.tolerance), int(r["size"]))
+                                             for _, r in d.iterrows() if is_partial(r)),
                             "crosses": [(c[5], c[3], c[4]) for c in cr],
                             "labels": lb,
                             "labels_below": [(c[5], c[6], c[3]) for c, b in zip(cr, bl) if b]}
@@ -492,7 +506,7 @@ def _draw_row(source: CellSource, spec: TrajectorySpec, out: Path) -> Dict:
         failsets.append(load_failures(source, spec, nm))
     size_mk = size_marker_map(pd.concat([d["size"] for _, d in frames]))
     ncol = len(frames)
-    figw, figh = 3.5 * ncol + 0.9, 5.4
+    figw, figh = 3.5 * ncol + 0.9, 5.4 + AXES_BOTTOM_IN - 1.75
     fig, axes = plt.subplots(1, ncol, figsize=(figw, figh),
                              sharex=True, sharey=True, squeeze=False)
     multi_format = any(d.regime.nunique() > 1 for _, d in frames)
@@ -501,6 +515,7 @@ def _draw_row(source: CellSource, spec: TrajectorySpec, out: Path) -> Dict:
         ax = axes[0][j]
         ax.set_xscale("log")
         ax.set_yscale("log")
+        ax.tick_params(labelsize=ROW_TEXT)
         pl, cr, hd = _draw_arms(ax, d, spec.dataset, multi_format, size_mk,
                                 failsets[j], nm, spec.marks)
         pending.append(pl)
@@ -524,34 +539,35 @@ def _draw_row(source: CellSource, spec: TrajectorySpec, out: Path) -> Dict:
     axes[0][0].set_ylim(min(ys) / pad_lo, max(ys) * pad_hi)
     axes[0][0].set_xlim(min(xs) / 2.0, max(xs) * xpad)
     # The final geometry before the tags are placed: they are placed in display space.
-    margins = dict(bottom=(1.75 + extra) / figh, top=1.0 - 0.75 / figh, left=0.088,
+    margins = dict(bottom=(AXES_BOTTOM_IN + extra) / figh, top=1.0 - 0.75 / figh, left=0.088,
                    right=0.988, wspace=0.08)
     fig.subplots_adjust(**margins)
-    below = _place_fail_labels(axes[0], crosses, spec.fail_labels_for)
+    below = _place_fail_labels(axes[0], crosses, spec.fail_labels_for, ROW_TEXT - 1)
     labels = []
     for j in range(ncol):
         _finish_axes(axes[0][j], pending[j] if spec.size_tags else None, set_limits=False)
         labels.append(_draw_failure_marks(axes[0][j], crosses[j], spec.fail_labels_for,
-                                          below[j]))
+                                          below[j], ROW_TEXT - 1))
     axes[0][0].annotate(BETTER, xy=(0.97, 0.96), xycoords="axes fraction", ha="right",
-                        va="top", fontsize=plotstyle.TICK_SIZE, color="#555555")
+                        va="top", fontsize=ROW_TEXT, color="#555555")
 
     fig.subplots_adjust(**margins)
     fig.supxlabel(plotstyle.bold(XLABEL), fontsize=plotstyle.LABEL_SIZE,
-                  y=(1.08 + extra) / figh, **plotstyle.bold_kw())
-    fig.text(0.001, 0.5 + (0.30 + extra / 2) / figh, plotstyle.bold(ELABEL), rotation=90,
+                  y=(XLABEL_IN + extra) / figh, **plotstyle.bold_kw())
+    # Level with where the axes' middle was before the bottom grew with ROW_SCALE.
+    fig.text(0.001, (3.0 + AXES_BOTTOM_IN - 1.75 + extra) / figh, plotstyle.bold(ELABEL), rotation=90,
              va="center", ha="left", fontsize=plotstyle.LABEL_SIZE, **plotstyle.bold_kw())
     fig.suptitle(plotstyle.bold(spec.title), fontsize=plotstyle.TITLE_SIZE,
                  y=1.0 - 0.26 / figh, **plotstyle.bold_kw())
     size_h = _size_handles(spec.dataset, size_mk)
     leg1 = fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, 0.0),
                       ncol=min(len(l), LEGEND_NCOL), frameon=False,
-                      fontsize=plotstyle.TICK_SIZE, handletextpad=0.6,
+                      fontsize=ROW_TEXT, handletextpad=0.6,
                       columnspacing=1.6, handlelength=1.2)
     fig.add_artist(leg1)
     fig.legend(size_h, [x.get_label() for x in size_h], loc="lower center",
-               bbox_to_anchor=(0.5, (0.62 + extra) / figh), ncol=len(size_h),
-               frameon=False, fontsize=plotstyle.TICK_SIZE, handletextpad=0.4,
+               bbox_to_anchor=(0.5, (SIZE_LEGEND_IN + extra) / figh), ncol=len(size_h),
+               frameon=False, fontsize=ROW_TEXT, handletextpad=0.4,
                columnspacing=1.4, title=None)
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out)

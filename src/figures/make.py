@@ -69,12 +69,13 @@ def presets() -> Dict[str, Any]:
         "1": CellFigure("dotmark", "sql2", 64),
         "2": TrajectorySpec(
             dataset="dotmark", regimes=("General",), norms=("l1", "l2", "inf"),
-            sizes=dotmark_sizes, tols=(1e-4,), fail_labels_for=frozenset({"General"}),
+            sizes=dotmark_sizes, tols=(1e-4,), size_tags=False,
+            fail_labels_for=frozenset({"General"}),
             title="General format, lifted DOTmark"),
         "3": TrajectorySpec(
             dataset="random_dense", regimes=("General",),
             norms=("rand_uniform", "rand_absgauss"), sizes=(1024, 4096, 16384, 65536),
-            tols=(1e-4, 1e-6), fail_labels_for=frozenset({"General"}),
+            tols=(1e-4, 1e-6), size_tags=False, fail_labels_for=frozenset({"General"}),
             title="General format, random cost matrices"),
         # The tol = 1e-6 arm is run up to N = 2^15; the cross marks N = 2^16.
         "4a": TrajectorySpec(

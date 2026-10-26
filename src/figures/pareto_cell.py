@@ -3,7 +3,9 @@
 Each (algorithm, tolerance) arm is one point: x = t_cert (SGM10), y = the KKT
 residual E_abs (geometric mean), both over the cell's co-solved instances.
 Colour is the algorithm family, its shade the arm's swept parameter (lighter =
-looser), and the marker the format the solver consumes. Where t_cert exceeds
+looser), and the marker the format the solver consumes. A point that
+aggregates fewer instances than the cell's co-solved set (an arm outside the
+co-solve basis, or one with fewer scored solves) is drawn hollow. Where t_cert exceeds
 t_solve, a tick at t_solve and a segment to the point show what t_cert adds:
 a baseline's recovery of (X, α, β) and, where its dual needs it, the scoring
 pass that measures r_D.
@@ -24,7 +26,7 @@ from src.figures import plotstyle
 from src.figures.cells import CellSource
 
 XCOL = "t_cert_sgm10_s"
-XLABEL = r"Time to a certified solution $t_{\mathrm{cert}}$ (s), SGM10"
+XLABEL = "Runtime including recovery and scoring (s), SGM10"
 ECOL = "E_abs_gm"
 ELABEL = "KKT residual, GM"
 
@@ -84,6 +86,24 @@ def shade(color: str, rank: int, n: int) -> str:
     return mc.to_hex((r + (1 - r) * f, g + (1 - g) * f, b + (1 - b) * f))
 
 
+def is_partial(row) -> bool:
+    """Whether a drawn cell aggregates fewer instances than its cell's co-solved
+    set (``n_cosolved < n_cosolved_cell``)."""
+    try:
+        return int(row["n_cosolved"]) < int(row["n_cosolved_cell"])
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def point_style(color: str, hollow: bool, edge_width: float) -> Dict:
+    """The marker colours of one point: filled with a white edge, or hollow
+    with an edge in ``color``."""
+    if hollow:
+        return dict(color=color, markerfacecolor="none", markeredgecolor=color,
+                    markeredgewidth=1.8)
+    return dict(color=color, markeredgecolor="white", markeredgewidth=edge_width)
+
+
 def draw_cert_segments(ax, g: pd.DataFrame, color: str) -> None:
     """A segment from t_solve to the point at t_cert, with a tick at t_solve,
     for each point whose t_cert exceeds t_solve by more than 2%."""
@@ -122,9 +142,10 @@ def draw_cell(ax, c: pd.DataFrame) -> None:
                                               sort=False):
         col = shade(FAMILY_COLOR.get(fam, "#444444"),
                     ranks[fam].index(arm_param(algo, tol)), len(ranks[fam]))
-        ax.plot(g[XCOL], g[ECOL], marker=FORMAT_MARKER.get(reg, "o"), color=col,
-                linestyle="none", markersize=10, markeredgecolor="white",
-                markeredgewidth=1.1, zorder=5)
+        for _, r in g.iterrows():
+            ax.plot([r[XCOL]], [r[ECOL]], marker=FORMAT_MARKER.get(reg, "o"),
+                    linestyle="none", markersize=10, zorder=5,
+                    **point_style(col, is_partial(r), 1.1))
         draw_cert_segments(ax, g, col)
     ax.set_xscale("log")
     ax.set_yscale("log")
@@ -202,4 +223,6 @@ def draw(source: CellSource, *, dataset: str, norm: str, size: int, out: Path) -
     fig.savefig(out)
     plt.close(fig)
     return {"arms": [(a, t) for a, t in zip(c.algorithm, c.tolerance)],
+            "hollow": sorted((r.algorithm, float(r.tolerance)) for _, r in c.iterrows()
+                             if is_partial(r)),
             "n_cosolved": int(c.n_cosolved.max())}
